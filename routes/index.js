@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
+const {authenticate} = require('../middleware/authenticate');
 const multer = require('multer');
 
 const path = require('path')
@@ -14,12 +15,9 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage: storage });
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index');
-});
 
-router.post('/register', function(req,res,next){
+// register router
+router.post('/register', async (req,res) => {
         const userData = {
             "Email": req.body["Email"],
             "First Name": req.body["First Name"],
@@ -35,81 +33,66 @@ router.post('/register', function(req,res,next){
             "Race" : req.body["Race"],
             "Religion" : req.body["Religion"]
         }
-        User.create(userData, function (error, user) {
-            if (error) {
-                return next(error);
-            } else {
-                req.session.userId = user._id;
-                return res.status(200).json(user);
-            }
-        });
+        try{
+            const user = new User(userData);
+            await user.save();
+            const token = await user.generateAuthToken();
+            res.header('x-auth',token).send(user);
+        }catch(e){
+            res.status(400).send(e);
+        }
 
 });
 
-router.post('/login',function(req,res,next){
-    User.authenticate(req.body["Email"],req.body["Password"],function(err,user){
-            if(err || !user) {
-                const err = new Error('Wrong email or password.');
-                err.status = 401;
-                return next(err);
-            } else {
-                req.session.userId = user._id;
-                return res.status(200).json(user);
-            }
-        })
+
+//login router
+router.post('/login', async(req,res) =>{
+  try{
+      const user = await User.findByCredentials(req.body["Email"],req.body["Password"]);
+      const token = await user.generateAuthToken();
+      res.header('x-auth',token).send(user);
+  }
+  catch(e){
+      res.status(400).send(e);
+  }
 })
 
-router.get('/logout',function(req,res,next){
-    if (req.session) {
-        // delete session object
-        req.session.destroy(function (err) {
-            if (err) {
-                return next(err);
-            } else {
-                return res.status(200).json("Logout successfully!");
-            }
-        });
+// logout router
+router.get('/logout',authenticate, async(req,res)=>{
+    try{
+        await req.user.removeToken(req.token);
+        res.status(200).send("Logout successfully.");
+    }
+    catch(e){
+        res.status(400).send(e);
     }
 })
 
-router.post('/uploadProfile',upload.single('profile'),function(req,res,next){
-    if(!req.session.userId){
-        return res.json("User is not authorized !");
-    }
+//uploadProfile router
+router.post('/uploadProfile',authenticate, upload.single('profile'),(req,res)=>{
 
-    else{
-        User.getUserById(req.session.userId,function(err,user){
-            if(err || !user){
-                return res.json("User is not authorized !");
-            };
-            console.log(req.file);
-            User.update({_id: user._id},{$set:{"Photo":req.file.path}},function(err,user){
-                if(err){
-                    return res.status(400).json("File upload failed when saving to db");
-                }
-                res.json("File uploaded successfully!");
-            })
-
-        })
-    }
-
-})
-
-router.get('/getProfile',function(req,res,next){
-    if(!req.session.userId){
-        return res.json("User is not authorized !");
-    }
-    User.getUserById(req.session.userId,function(err,user){
-        if(err || !user["Photo"]){
-            return res.status(400).json("File download failed when fetching file from db");
+    User.findOneAndUpdate({_id:req.user._id},{$set:{"Photo":req.file.path}},{new:true}).then((user)=>{
+        if(!user){
+            return res.status(404).send();
         }
-        res.download(user["Photo"],function(err){
-            if(err){
-                return res.status(400).json("Can not download file.");
-            }
-        });
+        res.send(user);
+    }).catch((e)=>{
+         res.status(400).send(e);
     })
+})
 
+
+//download profile photo router
+router.get('/getProfile', authenticate, (req,res)=>{
+
+    if(!req.user["Photo"]){
+        return res.status(404).json("File does not exist!");
+    }
+    res.download(req.user["Photo"],(err)=>{
+        if(err){
+            return res.status(400).json("Can not download file.");
+        }
+    })
 })
 
 module.exports = router;
