@@ -135,7 +135,7 @@ UserSchema.statics.findByCredentials = function (email, password) {
 
     return User.findOne({"Email":email}).then(function (user) {
         if (!user) {
-            return Promise.reject();
+            return Promise.reject("Email or password is not correct.");
         }
         return new Promise(function (resolve, reject) {
             bcrypt.compare(password, user["Password"], function (err, res) {
@@ -143,7 +143,7 @@ UserSchema.statics.findByCredentials = function (email, password) {
                     resolve(user);
                 }
                 else {
-                    reject();
+                    reject("Email or password is not correct.");
                 }
             });
         });
