@@ -1,5 +1,7 @@
 const env = process.env.NODE_ENV || 'development';
 
+console.log(env);
+
 
 if(env === 'development'){
     const config = require('./config.json');
