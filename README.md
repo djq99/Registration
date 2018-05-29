@@ -3,19 +3,19 @@ Simple express API to register users and upload users' photos.
 ****
 #### How to run it
 
-######Locally
+###### Locally
 1. Clone or download the repository.
 2. Make sure MongoDB is running.
 3. `npm install` will install all dependecies
 4. `npm start` will start the server.
 
 ****
-######Remotely
+###### Remotely
 
 I also set up the server on Heroku and the URL is <https://shrouded-beach-21895.herokuapp.com/>
 
 ****
-######Functionality
+###### Functionality
 
 - Accept a POST request to path `"/register"`, the request body should be a Json object which contains:
 `"EMail"`,`"First Name"`,`"Last Name"`,`"Password"`,`"Gender"`,`"Date of Birth"`,`"Zipcode,Height"`,`"Gender Preference"`,`"Age Preference Min"`,`"Age Preference Max"`,`"Race (optional)"` and `"Religion (optional)"`
