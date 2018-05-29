@@ -39,7 +39,6 @@ router.post('/register', async (req,res) => {
             const token = await user.generateAuthToken();
             res.header('x-auth',token).send(user);
         }catch(e){
-            console.log(e);
             res.status(400).send(e);
         }
 
